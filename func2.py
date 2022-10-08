@@ -2,7 +2,7 @@
 from math import comb
 import torch
 
-def CUR_iter_solver(X, T, alpha, lamda, epsilon, set_seed=False):
+def CUR_iter_solver(X, T, alpha, lamda, epsilon, initial_rho=1e-6, max_rho=1e10, tau=1.1, set_seed=False):
     N = X.shape[0]
     if set_seed:
         torch.manual_seed(1234)
@@ -12,7 +12,7 @@ def CUR_iter_solver(X, T, alpha, lamda, epsilon, set_seed=False):
     W_hat = torch.zeros(N,N)
     Lamda_1 = torch.zeros(N,N)
     Lamda_2 = torch.zeros(N,N)
-    rho_1 = rho_2 = 1e-6
+    rho_1 = rho_2 = initial_rho
 
     # Record old W
     W_old = torch.zeros(N,N)
@@ -20,11 +20,11 @@ def CUR_iter_solver(X, T, alpha, lamda, epsilon, set_seed=False):
     # Computation for the first iter
     XXT = torch.matmul(X, X.t()) 
     max_error = torch.tensor([1])
-    max_rho = 1e10
-    tau = 1.1
+    max_rho = max_rho
+    tau = tau
 
     while max_error.item() > epsilon:
-        A = XXT + (rho_1 + rho_2) * torch.diag(torch.ones(N))
+        A = 2*XXT + (rho_1 + rho_2) * torch.diag(torch.ones(N))
         A_inverse = A.inverse()
         W = update_W(A_inverse, XXT, rho_1, rho_2, W_tilde, Lamda_1, W_hat, Lamda_2)
         W_tilde = update_W_tilde(W, alpha, rho_1, Lamda_1)
@@ -43,7 +43,7 @@ def CUR_iter_solver(X, T, alpha, lamda, epsilon, set_seed=False):
         rho_2 = min(tau * rho_2, max_rho)
         
         W_old = W
-    return W, W_tilde, W_hat, loss_new
+    return W, W_tilde, W_hat, loss_new, rho_1, rho_2
 
 def comput_desired_loss(X, W, T, alpha, lamda):
     loss1 = torch.sum((X-torch.matmul(W,X)).pow(2))
@@ -58,7 +58,7 @@ def update_W(A_inverse, XXT, rho_1, rho_2, W_tilde, Lamda_1, W_hat, Lamda_2):
 
 def update_W_tilde(W, alpha, rho_1, Lamda_1):
     V = W.t() + 1/rho_1 * Lamda_1
-    eff = torch.ones((W.shape[0]))-alpha/(rho_1 * torch.sum(V.pow(2), dim=1).sqrt()) # [r] dimension 
+    eff = torch.maximum(torch.ones((W.shape[0]))-alpha/(rho_1 * torch.sum(V.pow(2), dim=1).sqrt()), torch.zeros(W.shape[0])) # [r] dimension 
     W_tilde = torch.matmul(torch.diag(eff), V) # a scalar for each row
     return W_tilde
 
