@@ -1,3 +1,4 @@
+# Optimization - iterative method
 # Minimize the loss following the same framework as the paper
 from math import comb
 import torch
