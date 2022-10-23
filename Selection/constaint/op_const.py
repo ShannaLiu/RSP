@@ -1,11 +1,11 @@
 import torch
 
-def op_const(X, T, r, epsilon=1e-3):
+def op_const(X, T, r, epsilon=1e-3, ratio=0.5):
     N = X.shape[0]
     W = torch.zeros(N,N)
     W_tilde = torch.zeros(N,N)
     error = torch.tensor([1])
-    lamda = 0.8 / (2*torch.max(torch.matmul(X, X.t()).abs()) )
+    lamda = ratio / (2*torch.max(torch.matmul(X, X.t()).abs()) )
     loss_rec = []
 
     while error.item() > epsilon:
