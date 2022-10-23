@@ -28,7 +28,7 @@ class CURSolver(torch.nn.Module):
         return loss
 
 
-def CUR_torch_solver(X, T, alpha, lamda, method, epochs, learning_rate, print=False):
+def CUR_adam_solver(X, T, alpha, lamda, method, epochs, learning_rate, print=False):
     N = X.shape[0]
     model = CURSolver(N, alpha, lamda, method)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)

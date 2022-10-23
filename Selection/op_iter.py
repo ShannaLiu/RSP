@@ -3,7 +3,7 @@
 from math import comb
 import torch
 
-def CUR_iter_solver(X, T, alpha, lamda, epsilon, initial_rho=1e-6, max_rho=1e10, tau=1.1, set_seed=False):
+def CUR_iter_solver(X, T, alpha, lamda, epsilon, rho_1=10^2, rho_2=10^2, set_seed=False):
     N = X.shape[0]
     if set_seed:
         torch.manual_seed(1234)
@@ -13,45 +13,81 @@ def CUR_iter_solver(X, T, alpha, lamda, epsilon, initial_rho=1e-6, max_rho=1e10,
     W_hat = torch.zeros(N,N)
     Lamda_1 = torch.zeros(N,N)
     Lamda_2 = torch.zeros(N,N)
-    rho_1 = rho_2 = initial_rho
 
-    # Record old W
-    W_old = torch.zeros(N,N)
+    # Record old loss
+    loss_old = -99999
 
-    # Computation for the first iter
+    # record the loss in each iteration if record = True
+
+    loss1_W_rec = []
+    loss2_Wt_rec = []
+    loss3_W_rec = []
+    loss0_Wt_rec = []
+    loss2_W_tilde_rec = []
+    loss3_W_hat_rec = []
+    loss0_W_tilde_rec = []
+        
+    # Computation for the unchanged terms
     XXT = torch.matmul(X, X.t()) 
+    A = 2*XXT + (rho_1 + rho_2) * torch.diag(torch.ones(N))
+    A_inverse = A.inverse()
+
     max_error = torch.tensor([1])
-    max_rho = max_rho
-    tau = tau
 
     while max_error.item() > epsilon:
-        A = 2*XXT + (rho_1 + rho_2) * torch.diag(torch.ones(N))
-        A_inverse = A.inverse()
         W = update_W(A_inverse, XXT, rho_1, rho_2, W_tilde, Lamda_1, W_hat, Lamda_2)
         W_tilde = update_W_tilde(W, alpha, rho_1, Lamda_1)
         W_hat = update_W_hat(T, lamda, W, rho_2, Lamda_2)
         Lamda_1 = Lamda_1 + rho_1*(W.t() - W_tilde)
         Lamda_2 = Lamda_2 + rho_2*(W-W_hat)
+        # Compute loss functions
+        loss1_W = loss1(X, W)
+        loss2_Wt = loss2(W.t())
+        loss3_W = loss3(T, W)
+        loss0_Wt = loss0(W.t())
+        loss2_W_tilde = loss2(W_tilde)
+        loss3_W_hat = loss3(T, W_hat)
+        loss0_W_tilde = loss0(W_tilde)
+
+        loss1_W_rec.append(loss1_W.item())
+        loss2_Wt_rec.append(loss2_Wt.item())
+        loss3_W_rec.append(loss3_W.item())
+        loss0_Wt_rec.append(loss0_Wt)
+        loss2_W_tilde_rec.append(loss2_W_tilde.item())
+        loss3_W_hat_rec.append(loss3_W_hat.item())
+        loss0_W_tilde_rec.append(loss0_W_tilde.item())
+        
         # compute stopping criterkon
         error_1 = torch.max(abs(W.t()-W_tilde))
         error_2 = torch.max(abs(W-W_hat))
-        loss_old, _, _, _ = comput_desired_loss(X, W_old, T, alpha, lamda)
-        loss_new, _, _, _ = comput_desired_loss(X, W, T, alpha, lamda)
+        loss_new = loss1_W + alpha*loss2_Wt + lamda*loss3_W
         error_3 = torch.max(abs(loss_new-loss_old))
         max_error = torch.max(torch.max(error_1, error_2), error_3)
+        loss_old = loss_new
 
-        rho_1 = min(tau * rho_1, max_rho)
-        rho_2 = min(tau * rho_2, max_rho)
-        
-        W_old = W
-    return W, W_tilde, W_hat, loss_new, rho_1, rho_2
+    params = {'W':W, 'W_tilde':W_tilde}
+    rec = {'loss1_W': torch.tensor(loss1_W_rec), 'loss2_Wt': torch.tensor(loss2_Wt_rec), 'loss3_W': torch.tensor(loss3_W_rec), 'loss0_Wt_rec': torch.tensor(loss0_Wt_rec),\
+            'loss2_W_tilde_rec': torch.tensor(loss2_W_tilde_rec), 'loss3_W_hat_rec': torch.tensor(loss3_W_hat_rec), 'loss0_W_tilde_rec': torch.tensor(loss0_W_tilde_rec)}
+    return params, rec
 
-def comput_desired_loss(X, W, T, alpha, lamda):
+
+def loss1(X, W):
     loss1 = torch.sum((X-torch.matmul(W,X)).pow(2))
-    loss2 = alpha*torch.sum(torch.sum(W.pow(2), dim=1).sqrt())
-    loss3 = lamda * torch.sum(torch.abs(T*W)) 
-    loss =  loss1 + loss2 + loss3
-    return loss, loss1, loss2, loss3
+    return loss1
+
+def loss2(W):
+    loss2 = torch.sum(torch.sum(W.pow(2), dim=1).sqrt())
+    return loss2
+
+def loss3(T, W):
+    loss3 = torch.sum(torch.abs(T*W)) 
+    return loss3
+
+def loss0(W):
+    loss0 = torch.sum(torch.max(torch.abs(W), dim=1).values >0)
+    return loss0
+
+
 
 def update_W(A_inverse, XXT, rho_1, rho_2, W_tilde, Lamda_1, W_hat, Lamda_2):
     H = 2*XXT + rho_1 * (W_tilde-1/rho_1*Lamda_1).t() + rho_2 * (W_hat-1/rho_2*Lamda_2)
