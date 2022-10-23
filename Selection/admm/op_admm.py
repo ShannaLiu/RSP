@@ -1,6 +1,5 @@
 # Optimization - iterative method
 # Minimize the loss following the same framework as the paper
-from math import comb
 import torch
 
 def CUR_iter_solver(X, T, alpha, lamda, epsilon, rho_1=10^2, rho_2=10^2, set_seed=False):
