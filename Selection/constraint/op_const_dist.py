@@ -24,7 +24,7 @@ def update_W(W_tilde, X, lamda, T, r):
     W_star = (A_tilde > lamda*torch.abs(T)).float() * (A_tilde - lamda*torch.abs(T)) + \
         (A_tilde < -lamda*torch.abs(T)).float() * (A_tilde + lamda*torch.abs(T))
     column_loss = 1/2*torch.sum((W_star-A_tilde).pow(2), dim=0) + lamda * torch.sum(torch.abs(T*W_star), dim=0)
-    ind = torch.sort(column_loss, descending=True).indices
+    ind = torch.sort(column_loss, descending=False).indices
     W = torch.zeros_like(W_star)
     W[:,ind[:r]] = W_star[:, ind[:r]]
     return W
@@ -32,8 +32,4 @@ def update_W(W_tilde, X, lamda, T, r):
 def compute_loss(W, T, X):
     loss = torch.sum((X-torch.matmul(W,X)).pow(2)) + torch.sum(torch.abs(T*W))
     return loss
-
-
-
-    
 
