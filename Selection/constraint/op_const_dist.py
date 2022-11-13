@@ -5,15 +5,17 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-def op_const_dist(X, T, r, epsilon=1e-3, ratio=0.5, max_iter=100, plot=False, training_mask=None):
+def op_const_dist(X, T, r, lamda1 = 1, epsilon=1e-3, ratio=0.5, max_iter=100, plot=False, training_mask=None):
     start = time.time()
     N = X.shape[0]
     W = torch.zeros(N,N)
     W_tilde = torch.zeros(N,N)
     error = torch.tensor([1])
-    L = ( 2*torch.max(torch.matmul(X, X.t()).abs()) )
-    lamda = ratio / L
+    L0 = ( 2*torch.max(torch.matmul(X, X.t()).abs()) )
+    T = lamda1 * T
+    lamda = ratio / L0
     loss_rec = []
+    error_rec = []
     sum_time_compute_A = []
     sum_time_compute_W = []
     sum_time_compute_column_loss = []
@@ -33,6 +35,8 @@ def op_const_dist(X, T, r, epsilon=1e-3, ratio=0.5, max_iter=100, plot=False, tr
         sum_time_compute_column_loss.append(time_compute_column_loss)
         sum_time_compute_column_selection.append(time_compute_column_selection)
         error = torch.max(torch.abs(W-W_tilde))
+        error = torch.maximum(error, (compute_loss(W, T, X) - compute_loss(W_tilde, T, X)).abs())
+        error_rec.append(error)
         start = time.time()
         loss_rec.append(compute_loss(W, T, X))
         sum_time_compute_loss.append(time.time()-start)
@@ -43,11 +47,11 @@ def op_const_dist(X, T, r, epsilon=1e-3, ratio=0.5, max_iter=100, plot=False, tr
 
     if plot:
         f = plt.figure(figsize=(15,5))
-        ax0 = f.add_subplot(121)
+        ax0 = f.add_subplot(131)
         ax0.plot(loss_rec)
         ax0.set_title('loss in each iteration')
 
-        ax1 = f.add_subplot(122)
+        ax1 = f.add_subplot(132)
         ax1.plot(np.cumsum(sum_time_compute_A), label='A tilde')
         ax1.plot(np.cumsum(sum_time_compute_W), label='optimal W')
         ax1.plot(np.cumsum(sum_time_compute_column_loss), label='each column loss')
@@ -56,6 +60,10 @@ def op_const_dist(X, T, r, epsilon=1e-3, ratio=0.5, max_iter=100, plot=False, tr
         ax1.axhline(y=time_prep, label='preparation (fixed multiply)')
         ax1.legend()
         ax1.set_title('Computation time')
+
+        ax2 = f.add_subplot(133)
+        ax2.plot(error_rec)
+        ax1.set_title('Error in each iteration')
 
     return W, loss_rec, sum_time_compute_A, sum_time_compute_W, sum_time_compute_column_loss, sum_time_compute_column_selection, sum_time_compute_loss, time_prep
 
