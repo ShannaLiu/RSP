@@ -4,6 +4,7 @@ import torch
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import warnings
 
 def op_const_lap(X, L, r, lambda1=1, epsilon=1e-3, ratio=0.5, max_iter=100, plot=False, training_mask=None):
     start = time.time()
@@ -95,6 +96,8 @@ def update_W(W_tilde, X, XXT, inverse, lamda, L, r, training_mask):
     column_loss[training_mask==0] = -float('inf')
     ind = torch.sort(column_loss, descending=True).indices # select max values
     W[:,ind[:r]] = W_star[:, ind[:r]]
+    if column_loss.max() <0 :
+        warnings.warn('The column is not decreasing the loss')
     time_compute_column_selection = time.time() - start
 
     return W, time_compute_A, time_compute_W, time_compute_column_loss, time_compute_column_selection
