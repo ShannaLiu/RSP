@@ -60,7 +60,7 @@ def sythetic_graph_generator(list_shapes, list_shapes_args, graph_type, graph_ar
     return G, Gg, group_label, shape_label, shape_dist
 
     
-def sythetic_label_generator(group_label, num_features, std=1):
+def sythetic_feature_generator(group_label, num_features, std=1):
     num_unique_group = len(np.unique(group_label))
     group_mean = torch.randn(num_unique_group, num_features)
     node_features = torch.zeros(len(group_label), num_features)
