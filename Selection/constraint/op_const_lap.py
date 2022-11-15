@@ -66,7 +66,7 @@ def op_const_lap(X, L, r, lambda1=1, epsilon=1e-3, ratio=0.5, max_iter=100, plot
 
         ax2 = f.add_subplot(133)
         ax2.plot(error_rec)
-        ax1.set_title('Error in each iteration')
+        ax2.set_title('Error in each iteration')
 
     return W, loss_rec, sum_time_compute_A, sum_time_compute_W, sum_time_compute_column_loss, sum_time_compute_column_selection
 

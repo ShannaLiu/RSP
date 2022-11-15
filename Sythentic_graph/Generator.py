@@ -1,9 +1,10 @@
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+import torch
 
 
-def build_hierarhical_structure(list_shapes, list_shapes_args, graph_type, graph_args, plot=False, plot_color='group_label', savefig=True):
+def sythetic_graph_generator(list_shapes, list_shapes_args, graph_type, graph_args, plot=False, plot_color='group_label', savefig=True):
     '''
     list_shapes: list of shapes of each subgraph, should correspond with class names in networkx, examples in Vis_list_type
     graph_type: type of graph used to conect the subgraphs, should correspond with function names in netwokx
@@ -59,5 +60,12 @@ def build_hierarhical_structure(list_shapes, list_shapes_args, graph_type, graph
     return G, Gg, group_label, shape_label, shape_dist
 
     
+def sythetic_label_generator(group_label, num_features, std=1):
+    num_unique_group = len(np.unique(group_label))
+    group_mean = torch.randn(num_unique_group, num_features)
+    
+
+
+
 
 
