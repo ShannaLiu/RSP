@@ -64,10 +64,10 @@ def sythetic_feature_generator(group_label, num_features, std=1):
     num_unique_group = len(np.unique(group_label))
     group_mean = torch.randn(num_unique_group, num_features)
     node_features = torch.zeros(len(group_label), num_features)
-    for i in node_features.shape[0]:
+    for i in range(node_features.shape[0]):
         node_mean = torch.tensor(group_mean[group_label[i],])
         node_features[i,] = torch.normal(node_mean, std=std)
-    return node_features
+    return node_features, group_mean
 
 
 
