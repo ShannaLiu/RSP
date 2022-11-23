@@ -2,9 +2,9 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import torch
+import os
 
-
-def sythetic_graph_generator(list_shapes, list_shapes_args, graph_type, graph_args, plot=False, plot_color='group_label', savefig=True):
+def synthetic_graph_generator(list_shapes, list_shapes_args, graph_type, graph_args, plot=False, plot_color='group_label', savefig=False, root=None, figname=None):
     '''
     list_shapes: list of shapes of each subgraph, should correspond with class names in networkx, examples in Vis_list_type
     graph_type: type of graph used to conect the subgraphs, should correspond with function names in netwokx
@@ -49,10 +49,20 @@ def sythetic_graph_generator(list_shapes, list_shapes_args, graph_type, graph_ar
     if plot:
         if plot_color not in ['group_label', 'shape_label']:
             raise Exception("Wrong plot_color, please change to 'group_label' or 'shape_label'")
-        nx.draw(G, node_color=eval(plot_color))
-
+        nx.draw(G, node_color=eval(plot_color), node_size=50)
         if savefig:
-            plt.savefig("plots/structure.png")
+            if root != None:
+                root = root + 'Synthetic'
+                if not os.path.exists(root):
+                    os.makedirs(root)
+                current = os.getcwd()
+                os.chdir(root)
+                plt.savefig(figname+'.png')
+                nx.write_adjlist(G, 'G.adjlist')
+                np.save('group_label.npy', group_label)
+                np.save('shape_label.npy', shape_label)
+                os.chdir(current) # Move back to current directory
+
 
     if (savefig == True) & (plot==False):
         raise Exception("Please save figure afer plot")
@@ -60,13 +70,23 @@ def sythetic_graph_generator(list_shapes, list_shapes_args, graph_type, graph_ar
     return G, Gg, group_label, shape_label, shape_dist
 
     
-def sythetic_feature_generator(group_label, num_features, std=1):
+def synthetic_feature_generator(group_label, num_features, std=1, save=False, root=None):
     num_unique_group = len(np.unique(group_label))
     group_mean = torch.randn(num_unique_group, num_features)
     node_features = torch.zeros(len(group_label), num_features)
     for i in range(node_features.shape[0]):
         node_mean = torch.tensor(group_mean[group_label[i],])
         node_features[i,] = torch.normal(node_mean, std=std)
+    if save:
+        if root != None:
+            root = root + 'Synthetic' 
+            if not os.path.exists(root):
+                os.makedirs(root)
+            current = os.getcwd()
+            os.chdir(root)
+            np.save('node_features.npy', node_features)
+            np.save('group_mean.npy', group_mean)
+            os.chdir(current) # Move back to current directory
     return node_features, group_mean
 
 
