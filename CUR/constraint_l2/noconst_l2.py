@@ -4,6 +4,8 @@ import torch
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.linalg import solve_sylvester
+
 
 def const_no(X, L, lambda1=1, epsilon=1e-3, ratio=0.5, max_iter=100, init_method='zero', plot=False):
     start = time.time()

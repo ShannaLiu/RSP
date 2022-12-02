@@ -76,7 +76,7 @@ def synthetic_feature_generator(group_label, num_features, std=1, save=False, ro
     node_features = torch.zeros(len(group_label), num_features)
     for i in range(node_features.shape[0]):
         node_mean = torch.tensor(group_mean[group_label[i],])
-        node_features[i,] = torch.normal(node_mean, std=std)
+        node_features[i,] = torch.distributions.MultivariateNormal(node_mean, std*torch.eye(node_mean.shape[0])).sample()
     if save:
         if root != None:
             root = root + 'Synthetic' 
