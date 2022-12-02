@@ -107,6 +107,18 @@ def repeated_feature_generator(group_label, num_repeated, num_features, std=1, s
     node_features, group_mean = synthetic_feature_generator(new_group_label, num_features, std, save, root)
     return node_features, group_mean, new_group_label
 
+def separated_feature_generator(group_label, num_separated, num_features, std=1, save=False, root=None):
+    new_group_label = np.int0(np.array(group_label))
+    label_unique = np.unique(group_label)
+    sep_label = resample(label_unique, replace=False, n_samples=num_separated) # seperated label
+    for i in range(num_separated):
+        sep_group_size = len(new_group_label[group_label==sep_label[i]])
+        label_change = resample(range(sep_group_size), replace=False, n_samples=np.int0(np.floor(sep_group_size/2)))
+        new_group_label[group_label==sep_label[i]] = np.concatenate(([np.max(new_group_label) + 1] * len(label_change), [sep_label[i]] * (len(new_group_label[group_label==sep_label[i]]) - len(label_change))))
+    node_features, group_mean = synthetic_feature_generator(new_group_label, num_features, std, save, root)
+    return node_features, group_mean, new_group_label
+    
+
     
 
 
