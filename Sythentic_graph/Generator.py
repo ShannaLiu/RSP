@@ -3,6 +3,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import torch
 import os
+from sklearn.utils import resample
 
 def synthetic_graph_generator(list_shapes, list_shapes_args, graph_type, graph_args, plot=False, plot_color='group_label', savefig=False, root=None, figname=None):
     '''
@@ -89,5 +90,23 @@ def synthetic_feature_generator(group_label, num_features, std=1, save=False, ro
             os.chdir(current) # Move back to current directory
     return node_features, group_mean
 
+def repeated_feature_generator(group_label, num_repeated, num_features, std=1, save=False, root=None):
+    new_group_label = np.int0(np.array(group_label))
+    label_unique = np.unique(group_label)
+    num_unique_group = len(label_unique) - num_repeated
+    if num_repeated >= num_unique_group:
+        raise Exception('number of repeated clusters can not be larger than real clusters')
+    del_label = resample(label_unique, replace=False, n_samples=num_repeated) # delete label
+    rep_label = resample(label_unique[label_unique!=del_label], replace=True, n_samples=num_repeated) # replace label
+    for i in range(num_repeated):
+        new_group_label[group_label==del_label[i]] = rep_label[i]
+    for i in range(num_repeated):
+        current_max = np.max(new_group_label)
+        if (del_label[i] < current_max):
+            new_group_label[new_group_label==current_max] = del_label[i]
+    node_features, group_mean = synthetic_feature_generator(new_group_label, num_features, std, save, root)
+    return node_features, group_mean, new_group_label
+
+    
 
 
