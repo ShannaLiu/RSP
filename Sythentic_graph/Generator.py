@@ -118,7 +118,18 @@ def separated_feature_generator(group_label, num_separated, num_features, std=1,
     node_features, group_mean = synthetic_feature_generator(new_group_label, num_features, std, save, root)
     return node_features, group_mean, new_group_label
     
-
+def matrix_generator(G):
+    '''
+    Get Laplacian matrix and the edge incidence matrix
+    '''
+    L = np.float32(nx.laplacian_matrix(G).todense())
+    Gamma = np.float32(nx.incidence_matrix(G).todense().T) # E * N
+    for i in range(Gamma.shape[0]):
+        for j in range(Gamma.shape[1]):
+            if Gamma[i,j] !=0:
+                Gamma[i,j] = - Gamma[i,j]
+                break
+    return L, Gamma
     
 
 
