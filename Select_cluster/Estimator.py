@@ -45,7 +45,10 @@ class Estimator(BaseEstimator):
             if self.solver not in ['SCS', 'ECOS', 'CVXOPT', 'ECOS_BB']:
                 self.solver = 'SCS'
                 print('Wrong solver name for cvxpy, SCS solver is used by default')
-
+    
+    def check_symmetric(self):
+        check_is_fitted(self, "W")
+        np.allclose(self.W.value, self.W.value.T)
     
 
 class ElastEstimator(Estimator):
@@ -130,7 +133,20 @@ class correctedElastEstimator(Estimator):
             prob.solve(max_iters=maxiter, solver=self.solver)
             self.W = W1
 
-
+class symElastEstimator(Estimator):
+    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
+        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
+    
+    def fit(self, X, maxiter):
+        if self.method == 'cp':
+            n = X.shape[0]
+            W1 = cp.Variable((n,n))
+            if self.diag_pen:
+                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_ee_penalty(self.Gamma, W1, self.l1, self.l2) + diag_penalty(W1, self.l3) ))
+            else:
+                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_ee_penalty(self.Gamma, W1, self.l1, self.l2) ))
+            prob.solve(max_iters=maxiter, solver=self.solver)
+            self.W = W1
 
 
 

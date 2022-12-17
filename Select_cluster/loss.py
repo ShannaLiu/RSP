@@ -34,3 +34,10 @@ def diag_penalty(W, l3):
     '''
     return l3 * (cp.trace(cp.abs(W)))
 
+
+def sym_recon_loss(X, W):
+    return  cp.norm(X-W@X-W.T@X, p='fro') ** 2
+
+
+def sym_ee_penalty(Gamma, W, l1, l2):
+    return l1 * ( cp.pnorm(Gamma@W, p=1) + cp.pnorm(Gamma@W.T, p=1)) + l2 * (cp.norm(Gamma@W, p='fro')**2 + cp.norm(Gamma@W.T, p='fro')**2 )
