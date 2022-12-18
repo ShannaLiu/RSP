@@ -48,7 +48,8 @@ class Estimator(BaseEstimator):
     
     def check_symmetric(self):
         check_is_fitted(self, "W")
-        np.allclose(self.W.value, self.W.value.T)
+        if not np.allclose(self.W.value, self.W.value.T):
+            print('The fitted matrix W is not symmetric')
     
 
 class ElastEstimator(Estimator):
