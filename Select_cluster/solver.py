@@ -1,4 +1,4 @@
-# For future use
+# To be explored
 from scipy.linalg import solve_sylvester
 
 def l2_sylvester_solver(X, L, l2):

@@ -40,4 +40,14 @@ def sym_recon_loss(X, W):
 
 
 def sym_ee_penalty(Gamma, W, l1, l2):
+    '''
+    symmetric loss
+    '''
     return l1 * ( cp.pnorm(Gamma@W, p=1) + cp.pnorm(Gamma@W.T, p=1)) + l2 * (cp.norm(Gamma@W, p='fro')**2 + cp.norm(Gamma@W.T, p='fro')**2 )
+
+def sym_eec_penalty(Gamma, W, l1, l2):
+    '''
+    degree corrected symmetric loss
+    '''
+    normalized_Gamma = Gamma@scipy.linalg.sqrtm(np.linalg.pinv(D))
+    return l1 * ( cp.pnorm(normalized_Gamma@W, p=1) + cp.pnorm(normalized_Gamma@W.T, p=1)) + l2 * (cp.norm(normalized_Gamma@W, p='fro')**2 + cp.norm(normalized_Gamma@W.T, p='fro')**2 )

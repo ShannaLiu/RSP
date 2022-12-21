@@ -134,6 +134,7 @@ class correctedElastEstimator(Estimator):
             prob.solve(max_iters=maxiter, solver=self.solver)
             self.W = W1
 
+
 class symElastEstimator(Estimator):
     def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
         Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
@@ -149,33 +150,20 @@ class symElastEstimator(Estimator):
             prob.solve(max_iters=maxiter, solver=self.solver)
             self.W = W1
 
-
-
-
-# def elast_cp_solver(X, Gamma, l1, l2, maxiter, solver='SCS'):
-#     n = X.shape[0]
-#     W = cp.Variable((n,n))
-#     prob = cp.Problem(cp.Minimize( recon_loss(X, W) + ee_penalty(Gamma, W, l1, l2) ))
-#     prob.solve(max_iters=maxiter, solver=solver)
-#     return W.value
-
-# def sparsel2_cp_solver(X, Gamma, l1, l2, maxiter, solver='SCS'):
-#     n = X.shape[0]
-#     W = cp.Variable((n,n))
-#     prob = cp.Problem(cp.Minimize( recon_loss(X, W) + sparse_lap(Gamma, W, l1, l2) ))
-#     prob.solve(max_iters=maxiter, solver=solver)
-#     return W.value
-
-# def lap_sylvester_solver(X, L, l2):
-#     a = (L*l2)
-#     b = X @ X.T
-#     q = X @ X.T
-#     W = solve_sylvester(a,b,q)
-#     return W
-
-
-
-
+class correctedsymElastEstimator(Estimator):
+    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
+        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
+    
+    def fit(self, X, maxiter):
+        if self.method == 'cp':
+            n = X.shape[0]
+            W1 = cp.Variable((n,n))
+            if self.diag_pen:
+                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_eec_penalty(self.Gamma, W1, self.l1, self.l2) + diag_penalty(W1, self.l3) ))
+            else:
+                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_eec_penalty(self.Gamma, W1, self.l1, self.l2) ))
+            prob.solve(max_iters=maxiter, solver=self.solver)
+            self.W = W1
 
 
 
