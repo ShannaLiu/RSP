@@ -45,7 +45,7 @@ def sym_ee_penalty(Gamma, W, l1, l2):
     '''
     return l1 * ( cp.pnorm(Gamma@W, p=1) + cp.pnorm(Gamma@W.T, p=1)) + l2 * (cp.norm(Gamma@W, p='fro')**2 + cp.norm(Gamma@W.T, p='fro')**2 )
 
-def sym_eec_penalty(Gamma, W, l1, l2):
+def sym_eec_penalty(Gamma, D, W, l1, l2):
     '''
     degree corrected symmetric loss
     '''
