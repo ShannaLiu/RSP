@@ -159,9 +159,9 @@ class correctedsymElastEstimator(Estimator):
             n = X.shape[0]
             W1 = cp.Variable((n,n))
             if self.diag_pen:
-                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_eec_penalty(self.Gamma, W1, self.l1, self.l2) + diag_penalty(W1, self.l3) ))
+                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_eec_penalty(self.Gamma, self.D, W1, self.l1, self.l2) + diag_penalty(W1, self.l3) ))
             else:
-                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_eec_penalty(self.Gamma, W1, self.l1, self.l2) ))
+                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_eec_penalty(self.Gamma, self.D, W1, self.l1, self.l2) ))
             prob.solve(max_iters=maxiter, solver=self.solver)
             self.W = W1
 
