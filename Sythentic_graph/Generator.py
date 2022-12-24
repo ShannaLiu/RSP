@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 import os
 from sklearn.utils import resample
+from scipy.linalg import block_diag
 
 def synthetic_graph_generator(list_shapes, list_shapes_args, graph_type, graph_args, plot=False, plot_color='group_label', savefig=False, root=None, figname=None):
     '''
@@ -117,7 +118,58 @@ def separated_feature_generator(group_label, num_separated, num_features, std=1,
         new_group_label[group_label==sep_label[i]] = np.concatenate(([np.max(new_group_label) + 1] * len(label_change), [sep_label[i]] * (len(new_group_label[group_label==sep_label[i]]) - len(label_change))))
     node_features, group_mean = synthetic_feature_generator(new_group_label, num_features, std, save, root)
     return node_features, group_mean, new_group_label
+
+def clean_feature_generator(group_label, num_features):
+    num_unique_group = len(np.unique(group_label))
+    group_mean = torch.randn(num_unique_group, num_features)
+    node_features = torch.zeros(len(group_label), num_features)
+    for i in range(node_features.shape[0]):
+        node_features[i,] = torch.tensor(group_mean[group_label[i],])
+    return node_features
     
+def sub_clean_feature_generator(group_label, num_features, num_latent_features, standard_basis=False):
+    '''
+    num_features : D, the dimension of features
+    num_latent_features : r/d = sum d_i, the sum of dimension of all latent features
+    num_features > num_latent_features > num_group
+    '''
+    num_unique_group = len(np.unique(group_label))
+    num_group = np.unique(group_label, return_counts=True)[1]
+    sub_dim = random_partition_generator(num_latent_features, num_unique_group)
+    if standard_basis:
+        U = np.eye(num_features)[:,:num_latent_features]
+    else:
+        cond = 1e10
+        while cond > 100:
+            id_vec = np.random.randn(num_features,num_features)
+            cond = np.linalg.cond(id_vec)
+        U = id_vec[:,:num_latent_features]
+    latent_features = random_latent_rep_generator(sub_dim, num_group)
+    node_features = (U @ latent_features).T # N * d
+    return U, latent_features, node_features
+
+
+def random_partition_generator(sum, num):
+    '''
+    generate a positive vector of length num, with fixed sum
+    '''
+    nums = []
+    for i in range(num-1):
+        nums.append(np.random.randint(sum-num-np.sum(nums)))
+    nums.append(sum-num-np.sum(nums))
+    nums = np.int0(nums + np.ones(num))
+    return nums
+
+def random_latent_rep_generator(sub_dim, num_group):
+    '''
+    generate random latent features
+    num_group: number of nodes in each group
+    '''
+    S = np.random.rand(sub_dim[0], num_group[0])
+    for i in range(1,len(sub_dim)):
+        S = block_diag(S, np.random.rand(sub_dim[i],num_group[i]))
+    return S
+
 def matrix_generator(G):
     '''
     Get Laplacian matrix and the edge incidence matrix

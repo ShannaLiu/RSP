@@ -9,6 +9,7 @@ from scipy.optimize import minimize
 
 from loss import *
 from solver import *
+from util import *
 
 class Estimator(BaseEstimator):
     '''
@@ -19,15 +20,18 @@ class Estimator(BaseEstimator):
     solver : solver name for 'cp', method name for 'scipy.optimize'
     diag_pen : penalization for diagonal matrix of W
     '''
-    def __init__(self, l1:float=0, l2:float=0, l3:float=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
+    def __init__(self, l1:float=0, l2:float=0, l3:float=0, Gamma=None, D=None, method=None, solver=None, deg_crct=False):
         self.l1 = l1
         self.l2 = l2
         self.l3 = l3
-        self.Gamma = Gamma
+        if deg_crct:
+            print('Degree corrected incidence matrix is used')
+            self.Gamma = Gamma@scipy.linalg.sqrtm(np.linalg.pinv(D))
+        else:
+            self.Gamma = Gamma
         self.D = D
         self.method = method 
         self.solver = solver 
-        self.diag_pen = diag_pen
         self.W = None
 
     def check_matrix(self):
@@ -51,122 +55,76 @@ class Estimator(BaseEstimator):
         if not np.allclose(self.W.value, self.W.value.T):
             print('The fitted matrix W is not symmetric')
     
+    def scaling(self, epsilon=1e-8, max_iter=1000, plot=True):
+        W0 = self.W.value
+        W0[W0<=0] = 1e-8
+        W_new = symscaling(W0, epsilon=epsilon, max_iter=max_iter)
+        if plot:
+            sb.heatmap(W_new, cmap='rainbow', center=0)
+        return W_new
+    
 
-class ElastEstimator(Estimator):
-    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
-        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
+class LR_Estimator(Estimator):
+    '''
+    Low rank representation
+    '''
+    def __init__(self, l3=0, method=None, solver=None, deg_crct=False):
+        Estimator.__init__(self, l3=l3, method=method, solver=solver, deg_crct=deg_crct)
+        
+    def fit(self, X, maxiter):
+        if self.method == 'cp':
+            n = X.shape[0]
+            W1 = cp.Variable((n,n))
+            prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + nuclear_penalty(W1, self.l3)))
+            prob.solve(max_iters=maxiter, solver=self.solver)
+            self.W = W1
+    
+
+class ss_El_Estimator(Estimator):
+    '''
+    symmetric recon loss + symmetric elast loss
+    '''
+    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, deg_crct=False):
+        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, deg_crct=deg_crct)
     
     def fit(self, X, maxiter):
         if self.method == 'cp':
             n = X.shape[0]
             W1 = cp.Variable((n,n))
-            if self.diag_pen:
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + ee_penalty(self.Gamma, W1, self.l1, self.l2) + diag_penalty(W1, self.l3) ))
-            else:
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + ee_penalty(self.Gamma, W1, self.l1, self.l2) ))
+            prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_ee_penalty(self.Gamma, W1, self.l1, self.l2) + nuclear_penalty(W1, self.l3)))
             prob.solve(max_iters=maxiter, solver=self.solver)
             self.W = W1
 
-
-class LassoEstimator(Estimator):
-    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
-        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
-
-    def fit(self, X, maxiter):
-        if self.method == 'cp':
-            n = X.shape[0]
-            W1 = cp.Variable((n,n))
-            if self.diag_pen:
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + l1_penalty(self.Gamma, self.l1, W1) ))
-            else:
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + l1_penalty(self.Gamma, self.l1, W1) + diag_penalty(W1, self.l3) ))
-            prob.solve(max_iters=maxiter, solver=self.solver)
-            self.W = W1
-
-
-class RidgeEstimator(Estimator):
-    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
-        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
-
-    def fit(self, X, maxiter):
-        if self.method == 'cp':
-            n = X.shape[0]
-            W1 = cp.Variable((n,n))
-            if self.diag_pen:
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + l2_penalty(self.Gamma, self.l2, W1) + diag_penalty(W1, self.l3) ))
-            else:
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + l2_penalty(self.Gamma, self.l2, W1) ))
-            prob.solve(max_iters=maxiter, solver=self.solver)
-            self.W = W1
-        if self.method == 'sylv':
-            W1 = l2_sylvester_solver(X, self.L, self.l2)
-            self.W = W1 
-
-
-class sparseElastEstimator(Estimator):
-    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
-        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
+class as_El_Estimator(Estimator):
+    '''
+    recon loss + symmetric elast loss
+    '''
+    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, deg_crct=False):
+        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, deg_crct=deg_crct)
     
     def fit(self, X, maxiter):
         if self.method == 'cp':
             n = X.shape[0]
             W1 = cp.Variable((n,n))
-            if self.diag_pen:
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + sp_l2_penalty(self.Gamma, W1, self.l1, self.l2) + diag_penalty(W1, self.l3)))
-            else :
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + sp_l2_penalty(self.Gamma, W1, self.l1, self.l2) ))                
+            prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + sym_ee_penalty(self.Gamma, W1, self.l1, self.l2) + nuclear_penalty(W1, self.l3)))
             prob.solve(max_iters=maxiter, solver=self.solver)
             self.W = W1
 
 
-class correctedElastEstimator(Estimator):
-    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
-        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
+class aa_El_Estimator(Estimator):
+    '''
+    recon loss + elast loss
+    '''
+    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, deg_crct=False):
+        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, deg_crct=deg_crct)
     
     def fit(self, X, maxiter):
         if self.method == 'cp':
             n = X.shape[0]
             W1 = cp.Variable((n,n))
-            if self.diag_pen:
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + eec_penalty(self.Gamma, self.D, W1, self.l1, self.l2) + diag_penalty(W1, self.l3)))
-            else :
-                prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + eec_penalty(self.Gamma, self.D, W1, self.l1, self.l2) ))
+            prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + ee_penalty(self.Gamma, W1, self.l1, self.l2) + nuclear_penalty(W1, self.l3)))
             prob.solve(max_iters=maxiter, solver=self.solver)
             self.W = W1
-
-
-class symElastEstimator(Estimator):
-    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
-        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
-    
-    def fit(self, X, maxiter):
-        if self.method == 'cp':
-            n = X.shape[0]
-            W1 = cp.Variable((n,n))
-            if self.diag_pen:
-                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_ee_penalty(self.Gamma, W1, self.l1, self.l2) + diag_penalty(W1, self.l3) ))
-            else:
-                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_ee_penalty(self.Gamma, W1, self.l1, self.l2) ))
-            prob.solve(max_iters=maxiter, solver=self.solver)
-            self.W = W1
-
-class correctedsymElastEstimator(Estimator):
-    def __init__(self, l1=0, l2=0, l3=0, Gamma=None, D=None, method=None, solver=None, diag_pen=False):
-        Estimator.__init__(self, l1=l1, l2=l2, l3=l3, Gamma=Gamma, D=D, method=method, solver=solver, diag_pen=diag_pen)
-    
-    def fit(self, X, maxiter):
-        if self.method == 'cp':
-            n = X.shape[0]
-            W1 = cp.Variable((n,n))
-            if self.diag_pen:
-                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_eec_penalty(self.Gamma, self.D, W1, self.l1, self.l2) + diag_penalty(W1, self.l3) ))
-            else:
-                prob = cp.Problem(cp.Minimize( sym_recon_loss(X, W1) + sym_eec_penalty(self.Gamma, self.D, W1, self.l1, self.l2) ))
-            prob.solve(max_iters=maxiter, solver=self.solver)
-            self.W = W1
-
-
-
 
 
 
