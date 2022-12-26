@@ -25,7 +25,6 @@ class Estimator(BaseEstimator):
         self.l2 = l2
         self.l3 = l3
         if deg_crct:
-            print('Degree corrected incidence matrix is used')
             self.Gamma = Gamma@scipy.linalg.sqrtm(np.linalg.pinv(D))
         else:
             self.Gamma = Gamma
@@ -55,21 +54,22 @@ class Estimator(BaseEstimator):
         if not np.allclose(self.W.value, self.W.value.T):
             print('The fitted matrix W is not symmetric')
     
-    def scaling(self, epsilon=1e-8, max_iter=1000, plot=True):
+    def scaling(self, epsilon=1e-8, max_iter=1000, plot=True, return_value=False):
         W0 = self.W.value
         W0[W0<=0] = 1e-8
         W_new = symscaling(W0, epsilon=epsilon, max_iter=max_iter)
         if plot:
             sb.heatmap(W_new, cmap='rainbow', center=0)
-        return W_new
+        if return_value:
+            return W_new
     
 
 class LR_Estimator(Estimator):
     '''
     Low rank representation
     '''
-    def __init__(self, l3=0, method=None, solver=None, deg_crct=False):
-        Estimator.__init__(self, l3=l3, method=method, solver=solver, deg_crct=deg_crct)
+    def __init__(self, l3=0, method=None, solver=None):
+        Estimator.__init__(self, l3=l3, method=method, solver=solver)
         
     def fit(self, X, maxiter):
         if self.method == 'cp':
@@ -109,7 +109,6 @@ class as_El_Estimator(Estimator):
             prob = cp.Problem(cp.Minimize( recon_loss(X, W1) + sym_ee_penalty(self.Gamma, W1, self.l1, self.l2) + nuclear_penalty(W1, self.l3)))
             prob.solve(max_iters=maxiter, solver=self.solver)
             self.W = W1
-
 
 class aa_El_Estimator(Estimator):
     '''

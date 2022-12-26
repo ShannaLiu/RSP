@@ -134,6 +134,10 @@ def sub_clean_feature_generator(group_label, num_features, num_latent_features, 
     num_features > num_latent_features > num_group
     '''
     num_unique_group = len(np.unique(group_label))
+    if num_latent_features < num_unique_group:
+        raise Exception('number of latent features needs to be larger than number of unique groups to have independent subsapce')
+    if num_latent_features > num_features:
+        raise Exception('number of features needs to be larger than number of latent features')
     num_group = np.unique(group_label, return_counts=True)[1]
     sub_dim = random_partition_generator(num_latent_features, num_unique_group)
     if standard_basis:
@@ -146,6 +150,14 @@ def sub_clean_feature_generator(group_label, num_features, num_latent_features, 
         U = id_vec[:,:num_latent_features]
     latent_features = random_latent_rep_generator(sub_dim, num_group)
     node_features = (U @ latent_features).T # N * d
+    return U, latent_features, node_features
+
+def sub_noisy_feature_generator(group_label, num_features, num_latent_features, std=1.0, standard_basis=False):
+    '''
+    std of Gaussian noise
+    '''
+    U, latent_features, node_features = sub_clean_feature_generator(group_label, num_features, num_latent_features, standard_basis)
+    node_features = node_features + np.random.randn(node_features.shape[0], node_features.shape[1]) * std
     return U, latent_features, node_features
 
 
@@ -170,18 +182,5 @@ def random_latent_rep_generator(sub_dim, num_group):
         S = block_diag(S, np.random.rand(sub_dim[i],num_group[i]))
     return S
 
-def matrix_generator(G):
-    '''
-    Get Laplacian matrix and the edge incidence matrix
-    '''
-    L = np.float32(nx.laplacian_matrix(G).todense())
-    Gamma = np.float32(nx.incidence_matrix(G).todense().T) # E * N
-    for i in range(Gamma.shape[0]):
-        for j in range(Gamma.shape[1]):
-            if Gamma[i,j] !=0:
-                Gamma[i,j] = - Gamma[i,j]
-                break
-    return L, Gamma
-    
 
 
