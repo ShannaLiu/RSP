@@ -127,7 +127,7 @@ def clean_feature_generator(group_label, num_features):
         node_features[i,] = torch.tensor(group_mean[group_label[i],])
     return node_features
     
-def sub_clean_feature_generator(group_label, num_features, num_latent_features, standard_basis=False):
+def sub_clean_feature_generator(group_label, num_features, num_latent_features):
     '''
     num_features : D, the dimension of features
     num_latent_features : r/d = sum d_i, the sum of dimension of all latent features
@@ -140,23 +140,23 @@ def sub_clean_feature_generator(group_label, num_features, num_latent_features, 
         raise Exception('number of features needs to be larger than number of latent features')
     num_group = np.unique(group_label, return_counts=True)[1]
     sub_dim = random_partition_generator(num_latent_features, num_unique_group)
-    if standard_basis:
-        U = np.eye(num_features)[:,:num_latent_features]
-    else:
-        cond = 1e10
-        while cond > 100:
-            id_vec = np.random.randn(num_features,num_features)
-            cond = np.linalg.cond(id_vec)
-        U = id_vec[:,:num_latent_features]
+    cond = 1e10
+    # To make sure the random matrix is of full rank
+    while cond > 100:
+        rand_mat = np.random.randn(num_features,num_features)
+        cond = np.linalg.cond(rand_mat)
+    q, _ = np.linalg.qr(rand_mat)
+    U = q[:,:num_latent_features]
+    
     latent_features = random_latent_rep_generator(sub_dim, num_group)
     node_features = (U @ latent_features).T # N * d
     return U, latent_features, node_features
 
-def sub_noisy_feature_generator(group_label, num_features, num_latent_features, std=1.0, standard_basis=False):
+def sub_noisy_feature_generator(group_label, num_features, num_latent_features, std=1.0):
     '''
     std of Gaussian noise
     '''
-    U, latent_features, node_features = sub_clean_feature_generator(group_label, num_features, num_latent_features, standard_basis)
+    U, latent_features, node_features = sub_clean_feature_generator(group_label, num_features, num_latent_features)
     node_features = node_features + np.random.randn(node_features.shape[0], node_features.shape[1]) * std
     return U, latent_features, node_features
 
