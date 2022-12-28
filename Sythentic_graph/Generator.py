@@ -127,11 +127,12 @@ def clean_feature_generator(group_label, num_features):
         node_features[i,] = torch.tensor(group_mean[group_label[i],])
     return node_features
     
-def sub_clean_feature_generator(group_label, num_features, num_latent_features):
+def sub_clean_feature_generator(group_label, num_features, num_latent_features, orthogonal=False):
     '''
     num_features : D, the dimension of features
     num_latent_features : r/d = sum d_i, the sum of dimension of all latent features
     num_features > num_latent_features > num_group
+    orthogonal: whether the columns in U are orthogonal (not necessary)
     '''
     num_unique_group = len(np.unique(group_label))
     if num_latent_features < num_unique_group:
@@ -145,18 +146,19 @@ def sub_clean_feature_generator(group_label, num_features, num_latent_features):
     while cond > 100:
         rand_mat = np.random.randn(num_features,num_features)
         cond = np.linalg.cond(rand_mat)
-    q, _ = np.linalg.qr(rand_mat)
-    U = q[:,:num_latent_features]
+    if orthogonal:
+        rand_mat, _ = np.linalg.qr(rand_mat)
+    U = rand_mat[:,:num_latent_features]
     
     latent_features = random_latent_rep_generator(sub_dim, num_group)
     node_features = (U @ latent_features).T # N * d
     return U, latent_features, node_features
 
-def sub_noisy_feature_generator(group_label, num_features, num_latent_features, std=1.0):
+def sub_noisy_feature_generator(group_label, num_features, num_latent_features, std=1.0, orthogonal=False):
     '''
     std of Gaussian noise
     '''
-    U, latent_features, node_features = sub_clean_feature_generator(group_label, num_features, num_latent_features)
+    U, latent_features, node_features = sub_clean_feature_generator(group_label, num_features, num_latent_features, orthogonal)
     node_features = node_features + np.random.randn(node_features.shape[0], node_features.shape[1]) * std
     return U, latent_features, node_features
 
