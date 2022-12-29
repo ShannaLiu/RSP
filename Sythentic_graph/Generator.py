@@ -127,7 +127,7 @@ def clean_feature_generator(group_label, num_features):
         node_features[i,] = torch.tensor(group_mean[group_label[i],])
     return node_features
     
-def sub_clean_feature_generator(group_label, num_features, num_latent_features, orthogonal=False):
+def sub_clean_feature_generator(group_label, num_features, num_latent_features, orthogonal=False, graph_based=False, G=None):
     '''
     num_features : D, the dimension of features
     num_latent_features : r/d = sum d_i, the sum of dimension of all latent features
