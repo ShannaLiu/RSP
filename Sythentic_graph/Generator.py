@@ -167,11 +167,14 @@ def random_partition_generator(sum, num):
     '''
     generate a positive vector of length num, with fixed sum
     '''
-    nums = []
-    for i in range(num-1):
-        nums.append(np.random.randint(sum-num-np.sum(nums)))
-    nums.append(sum-num-np.sum(nums))
-    nums = np.int0(nums + np.ones(num))
+    if sum == num:
+        nums = np.int0(np.ones(num))
+    else:
+        nums = []
+        for i in range(num-1):
+            nums.append(np.random.randint(sum-num-np.sum(nums)))
+        nums.append(sum-num-np.sum(nums))
+        nums = np.int0(nums + np.ones(num))
     return nums
 
 def random_latent_rep_generator(sub_dim, num_group):

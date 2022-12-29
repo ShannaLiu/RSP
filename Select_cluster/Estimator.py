@@ -54,12 +54,12 @@ class Estimator(BaseEstimator):
         if not np.allclose(self.W.value, self.W.value.T):
             print('The fitted matrix W is not symmetric')
     
-    def scaling(self, epsilon=1e-8, max_iter=1000, plot=True, return_value=False):
+    def scaling(self, epsilon=1e-8, max_iter=1000, plot=True, return_value=False, xticklabels=True, yticklabels=True, cbar=True):
         W0 = self.W.value
         W0[W0<=0] = 1e-8
         W_new = symscaling(W0, epsilon=epsilon, max_iter=max_iter)
         if plot:
-            sb.heatmap(W_new, cmap='rainbow', center=0)
+            sb.heatmap(W_new, cmap='rainbow', center=0, xticklabels=xticklabels, yticklabels=yticklabels, cbar=cbar)
         if return_value:
             return W_new
     
