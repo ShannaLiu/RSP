@@ -58,7 +58,7 @@ class Estimator(BaseEstimator):
             print('The fitted matrix W is not symmetric')
     
     def scaling(self, epsilon=1e-5, max_iter=1000, plot=True, return_value=False, xticklabels=True, yticklabels=True, cbar=True):
-        W0 = np.abs(self.W)
+        W0 = np.abs(self.W) + np.abs(self.W.T)
         W0[W0==0] = 1e-8
         W_new = scaling(W0, epsilon=epsilon, max_iter=max_iter)
         if plot:
