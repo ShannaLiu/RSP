@@ -1,7 +1,8 @@
 import numpy as np
 from sklearn.metrics import confusion_matrix
 import networkx as nx
-
+from sklearn import metrics
+from sklearn.metrics.cluster import rand_score
 
 # Information-based evaluation
 def compute_NMI(X,Y):
@@ -9,32 +10,15 @@ def compute_NMI(X,Y):
     Input:
         X, Y : label for each node
     '''
-    p = confusion_matrix(X,Y) / len(X)
-    pi = np.sum(p, axis=0)
-    pj = np.sum(p, axis=1)
-    num = np.diag(1/pi) @ p @ np.diag(1/pj)
-    den = ( np.sum(pi * np.log(pi)) + np.sum(pi * np.log(pj)) )
-    return -2 * num / den
-
+    return metrics.adjusted_mutual_info_score(X, Y) 
+    
 def compute_RI(X, Y):
-    n = len(X)
-    a, b, c, d = 0, 0, 0, 0
-    for i in range(n):
-        for j in range(n):
-            if (X[i]==X[j]) & (Y[i]==Y[j]):
-                a += 1
-            elif (X[i]!=X[j]) & (Y[i]!=Y[j]):
-                d += 1
-            elif (X[i]!=X[j]) & (Y[i]==Y[j]):
-                c += 1
-            elif (X[i]==X[j]) & (Y[i]!=Y[j]):
-                b += 1
-    return (a+d) / (a+b+c+d)
+    return rand_score(X,Y)
 
 # Quality-based 
 def compute_Q(G, X):
     '''
-    A : the adjacency matrix
+    G : the graph
     X : the label for each node
     '''
     n = G.number_of_nodes()
@@ -47,7 +31,7 @@ def compute_Q(G, X):
             Q += ( A[i,j]- K[i]*K[j]/(2*e) ) * (X[i]==X[j])
     return Q / (2*e)
 
-def compute_den(G,X):
+def compute_den(G, X):
     n = G.number_of_nodes()
     e = G.number_of_edges()
     A = nx.adj_matrix(G).todense()
