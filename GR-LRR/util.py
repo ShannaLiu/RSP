@@ -34,3 +34,11 @@ def scaling(A, epsilon=1e-5, max_iter=1000):
         iter += 1
         error = np.max(np.abs(A_old - A_new))
     return A_new
+
+def reduced_eigen(A):
+    Sigma, U = np.linalg.eigh(A)
+    idx = Sigma.argsort()[::-1]   
+    Sigma = Sigma[idx]
+    U = U[:,idx]
+    k = np.linalg.matrix_rank(A)
+    return Sigma[:k], U[:,:k]

@@ -1,6 +1,7 @@
 # To be explored
 from scipy.linalg import solve_sylvester
 import numpy as np
+from util import *
 
 def l2_sylvester_solver(X, L, l2):
     a = (L*l2)
@@ -82,10 +83,4 @@ def loss_l(Gamma, X, W, alpha, beta, gamma):
     return np.linalg.norm(X-W@X, ord='fro')  + (alpha/2) * (np.linalg.norm(Gamma@W, ord='fro') + np.linalg.norm(Gamma@W.T, ord='fro'))  \
          + (beta/2) * (np.sum(np.abs(Gamma@W)) + np.sum(np.abs(Gamma@W.T))) + gamma * np.linalg.norm(W, ord='nuc')
       
-def reduced_eigen(A):
-    Sigma, U = np.linalg.eigh(A)
-    idx = Sigma.argsort()[::-1]   
-    Sigma = Sigma[idx]
-    U = U[:,idx]
-    k = np.linalg.matrix_rank(A)
-    return Sigma[:k], U[:,:k]
+
